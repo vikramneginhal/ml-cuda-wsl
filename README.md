@@ -1,15 +1,35 @@
 # ml-cuda-wsl
-This document contains my notes from attempts to get the gpu acceleration working on Windows laptop.
+This document contains my notes from attempts to get the gpu acceleration working on Windows laptop. After doing google, found the [nvidia cuda on WSL](https://docs.nvidia.com/cuda/wsl-user-guide/index.html) that looked promising. All things on this page are experimental versions. So need to follow these steps exactly and in the same order.
+
+## Issues faced and fixing
+Initially I did not pay attention to and tried to use the existing WSL ubuntu instance. This failed to execute **BlackScholes** sample with misterious errors. So tried to google the error and seems like many people faced issues. Followin the individual recommendations, and corrected the versions by doing updates and upgrades, still no luck. So went back to the page and noticed that Nvidia doc said *complete these steps in* **order**. So changed my approach to start with clean slate. 
+* Deleted all Nvidia drivers
+* Deleted ubuntu instance
+* Set windows 10 to windows insider channel to **Dev channel**. Other channels dont work
+* In adavanced optionsSelected **Recieve updates for other MS products**. Again it does not work without this
+* Let windows update all things it cound find.
+* In the optional features selected **"virtual machine platform"**, **"Windows hypervisor platform"** and **"Windows subsystem for linux"**
+* Installed Visual studio
+* Redownloaded the nvidia developer version of drivers and installed
+* then followed then steps in [nvidia cuda on WSL](https://docs.nvidia.com/cuda/wsl-user-guide/index.html)
+After this **BlackScholes** sample ran correctly.
 
 ## Shell commands on wsl ubuntu 18.04 
 ```
-$ sudo apt-key adv --fetch-keys http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub
-
 $ sudo su - 
-# sh -c 'echo "deb http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/cuda.list'
-# apt-get update
-# apt-get install -y cuda-toolkit-11-0
+$ apt-key adv --fetch-keys http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub
+$ sh -c 'echo "deb http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/cuda.list'
+$ apt-get update
+$ apt-get install -y cuda-toolkit-11-0
 ```
+
+## To test if it is working 
+```
+$ cd /usr/local/cuda/samples/4_Finance/BlackScholes
+$ make # Samples are not prebuilt/compiled
+$ ./BlackScholes 
+```
+
 ## Execution logs
 ```
 $ sudo apt-key adv --fetch-keys http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub
@@ -1154,4 +1174,68 @@ WARNING: Adding a user to the "docker" group will grant the ability to run
          docker host.
          Refer to https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface
          for more information.
+$ make
+/usr/local/cuda-11.0/bin/nvcc -ccbin g++ -I../../common/inc  -m64    -maxrregcount=16 -gencode arch=compute_35,code=sm_35 -gencode arch=compute_37,code=sm_37 -gencode arch=compute_50,code=sm_50 -gencode arch=compute_52,code=sm_52 -gencode arch=compute_60,code=sm_60 -gencode arch=compute_61,code=sm_61 -gencode arch=compute_70,code=sm_70 -gencode arch=compute_75,code=sm_75 -gencode arch=compute_80,code=sm_80 -gencode arch=compute_80,code=compute_80 -o BlackScholes.o -c BlackScholes.cu
+nvcc warning : The 'compute_35', 'compute_37', 'compute_50', 'sm_35', 'sm_37' and 'sm_50' architectures are deprecated, and may be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+ptxas warning : For profile sm_70 adjusting per thread register count of 16 to lower bound of 24
+ptxas warning : For profile sm_75 adjusting per thread register count of 16 to lower bound of 24
+ptxas warning : For profile sm_80 adjusting per thread register count of 16 to lower bound of 24
+/usr/local/cuda-11.0/bin/nvcc -ccbin g++ -I../../common/inc  -m64    -maxrregcount=16 -gencode arch=compute_35,code=sm_35 -gencode arch=compute_37,code=sm_37 -gencode arch=compute_50,code=sm_50 -gencode arch=compute_52,code=sm_52 -gencode arch=compute_60,code=sm_60 -gencode arch=compute_61,code=sm_61 -gencode arch=compute_70,code=sm_70 -gencode arch=compute_75,code=sm_75 -gencode arch=compute_80,code=sm_80 -gencode arch=compute_80,code=compute_80 -o BlackScholes_gold.o -c BlackScholes_gold.cpp
+nvcc warning : The 'compute_35', 'compute_37', 'compute_50', 'sm_35', 'sm_37' and 'sm_50' architectures are deprecated, and may be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+/usr/local/cuda-11.0/bin/nvcc -ccbin g++   -m64      -gencode arch=compute_35,code=sm_35 -gencode arch=compute_37,code=sm_37 -gencode arch=compute_50,code=sm_50 -gencode arch=compute_52,code=sm_52 -gencode arch=compute_60,code=sm_60 -gencode arch=compute_61,code=sm_61 -gencode arch=compute_70,code=sm_70 -gencode arch=compute_75,code=sm_75 -gencode arch=compute_80,code=sm_80 -gencode arch=compute_80,code=compute_80 -o BlackScholes BlackScholes.o BlackScholes_gold.o
+nvcc warning : The 'compute_35', 'compute_37', 'compute_50', 'sm_35', 'sm_37' and 'sm_50' architectures are deprecated, and may be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+mkdir -p ../../bin/x86_64/linux/release
+cp BlackScholes ../../bin/x86_64/linux/release
+$ ls -al
+total 904
+drwxr-xr-x  3 root root   4096 Mar  7 18:26 .
+drwxr-xr-x 10 root root   4096 Mar  7 17:18 ..
+-rwxr-xr-x  1 root root 757744 Mar  7 18:26 BlackScholes
+-rw-r--r--  1 root root   8382 Jul 23  2020 BlackScholes.cu
+-rw-r--r--  1 root root 109240 Mar  7 18:26 BlackScholes.o
+-rw-r--r--  1 root root   2787 Jul 23  2020 BlackScholes_gold.cpp
+-rw-r--r--  1 root root   3504 Mar  7 18:26 BlackScholes_gold.o
+-rw-r--r--  1 root root   3646 Jul 23  2020 BlackScholes_kernel.cuh
+-rw-r--r--  1 root root  12164 Jul 23  2020 Makefile
+-rw-r--r--  1 root root   1833 Jul 23  2020 NsightEclipse.xml
+drwxr-xr-x  2 root root   4096 Mar  7 17:19 doc
+-rw-r--r--  1 root root    189 Jul 23  2020 readme.txt
+
+$ ./BlackScholes
+[./BlackScholes] - Starting...
+GPU Device 0: "Maxwell" with compute capability 5.0
+
+Initializing data...
+...allocating CPU memory for options.
+...allocating GPU memory for options.
+...generating input data in CPU mem.
+...copying input data to GPU mem.
+Data init done.
+
+Executing Black-Scholes GPU kernel (512 iterations)...
+Options count             : 8000000
+BlackScholesGPU() time    : 2.282373 msec
+Effective memory bandwidth: 35.051239 GB/s
+Gigaoptions per second    : 3.505124
+
+BlackScholes, Throughput = 3.5051 GOptions/s, Time = 0.00228 s, Size = 8000000 options, NumDevsUsed = 1, Workgroup = 128
+
+Reading back GPU results...
+Checking the results...
+...running CPU calculations.
+
+Comparing the results...
+L1 norm: 1.741792E-07
+Max absolute error: 1.192093E-05
+
+Shutting down...
+...releasing GPU memory.
+...releasing CPU memory.
+Shutdown done.
+
+[BlackScholes] - Test Summary
+
+NOTE: The CUDA Samples are not meant for performance measurements. Results may vary when GPU Boost is enabled.
+
+Test passed
 ```
